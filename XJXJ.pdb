@@ -1,0 +1,52 @@
+HEADER    ELECTRON TRANSPORT                      10-NOV-03   XJXJ              
+TITLE     CRYSTAL STRUCTURE OF 2FE2S FERREDOXIN FROM THERMOPHILIC               
+TITLE    2 CYANOBACTERIUM MASTIGOCLADUS LAMINOSUS                               
+COMPND    MOL_ID: 1;                                                            
+COMPND   2 MOLECULE: FERREDOXIN;                                                
+COMPND   3 CHAIN: A, B                                                          
+SOURCE    MOL_ID: 1;                                                            
+SOURCE   2 ORGANISM_SCIENTIFIC: MASTIGOCLADUS LAMINOSUS;                        
+SOURCE   3 ORGANISM_TAXID: 83541                                                
+KEYWDS    FERREDOXIN, THERMOSTABILITY, ELECTRON TRANSPORT                       
+EXPDTA    X-RAY DIFFRACTION                                                     
+AUTHOR    A.FISH,R.NECHUSHTAI,O.LIVNAH                                          
+REVDAT   2   24-FEB-09 XJXJ    1       VERSN                                    
+REVDAT   1   12-APR-05 XJXJ    0                                                
+JRNL        AUTH   A.FISH,T.DANIELI,I.OHAD,R.NECHUSHTAI,O.LIVNAH                
+JRNL        TITL   STRUCTURAL BASIS FOR THE THERMOSTABILITY OF                  
+JRNL        TITL 2 FERREDOXIN FROM THE CYANOBACTERIUM MASTIGOCLADUS             
+JRNL        TITL 3 LAMINOSUS.                                                   
+JRNL        REF    J.MOL.BIOL.                   V. 350   599 2005              
+JRNL        REFN                   ISSN 0022-2836                               
+JRNL        PMID   15961101                                                     
+JRNL        DOI    10.1016/J.JMB.2005.04.071                                    
+DBREF  XJXJ A    1    8  UNP    P00248   cube1        1     98             
+DBREF  XJXJ B  9   16  UNP    P00248   cube2        1     98             
+SEQRES   1 A   98  ALA THR TYR LYS VAL THR LEU ILE ASN         
+SEQRES   1 B   98  ALA THR TYR LYS VAL THR LEU ILE ASN          
+ATOM      1  N   ALA A   1       0  0  0  1.00 15.41           N  
+ATOM      2  CA  THR A   2       4  0  0  1.00 12.17           C  
+ATOM      3  C   TYR A   3       4  4  0  1.00 12.28           C  
+ATOM      4  O   VAL A   4       0  4  0  1.00 13.64           O  
+ATOM      5  CB  THR A   5       0  4  4  1.00 11.88           C  
+ATOM      6  N   LEU A   6       4  4  4  1.00 10.67           N  
+ATOM      7  CA  ILE A   7       4  0  4  1.00 11.03           C  
+ATOM      8  C   ASN A   8       0  0  4  1.00 11.39           C  
+CONECT  312 1521                                                                
+CONECT  343 1521                                                                
+CONECT  362 1522                                                                
+CONECT  600 1522                                                                
+CONECT 1091 1525                                                                
+CONECT 1122 1525                                                                
+CONECT 1141 1526                                                                
+CONECT 1370 1526                                                                
+CONECT 1521  312  343 1523 1524                                                 
+CONECT 1522  362  600 1523 1524                                                 
+CONECT 1523 1521 1522                                                           
+CONECT 1524 1521 1522                                                           
+CONECT 1525 1091 1122 1527 1528                                                 
+CONECT 1526 1141 1370 1527 1528                                                 
+CONECT 1527 1525 1526                                                           
+CONECT 1528 1525 1526                                                           
+MASTER      299    0    2    9   14    0    5    6 1770    2   16   16          
+END                                                                             
