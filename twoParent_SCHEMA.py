@@ -166,7 +166,7 @@ def atomSorter(chain_atoms):
   atomIndexDict={} #Dictionary relating atom index (relative to all atoms in structure) to 
   for i, atomSeqIO in enumerate(allAtoms):
     resIndex=atomSeqIO.get_full_id()[3][1]
-    chainID=atomSeqIO.get_full_id()[2]
+    chainID=letterToNumber_dict[atomSeqIO.get_full_id()[2]]  #Get the chain Letter code and translate to a number with the letterToNumber_dict.
     currentAtom=atom(resIndex, chainID, atomSeqIO, i)
     atomIndexDict[i]=currentAtom
   
@@ -178,101 +178,99 @@ def atomSorter(chain_atoms):
     atomToResDict[key]=residueSeqIO
   return atomIndexDict, atomToResDict
 
-def contact_maker(Fd_ind, parentName, res_list, indDict, atomIndexDict, atomToResDict):
+def contact_maker(Fd_chainID, parentName, res_list, indDict, atomIndexDict, atomToResDict):
 
-  #Need to combine all lists of not selected Fd atoms
-  nonFdAtoms = []
-  for ind, chain in enumerate(chain_atoms):
-    if ind == Fd_ind:
-      Fd_atoms = chain_atoms[ind] #Selecting Fd atoms from chain atoms list
-    else:
-      nonFdAtoms.append(chain_atoms[ind]) #Add non-Fd atoms to non-Fd atoms list
+  fdAtomIndexDict={} #Create dictionary for Fd atoms only
 
-  nonFdAtoms = [item for sublist in nonFdAtoms for item in sublist] #Collapses all sublists into a single list.  This puts all atoms from non-Fd chains into a single list
-
+  Fd_atoms = []
+  for key in atomIndexDict.keys():
+    atom=atomIndexDict[key]
+    if atom.chainID == Fd_chainID:
+      atomOB=atom.atomOB
+      Fd_atoms.append(atomOB) 
+      
+      fdAtomIndexDict[key]=atom #Start dumping into Fd dictionary
+  
 
   #Creates NeighborSearch object with Fd_atoms list. Generates the object only.  Using only the Fd atoms here.  
   #Can use nonFdAtoms if wanting to tests contacts with other chains.
   neighbor_searcher = NeighborSearch(Fd_atoms)
   
-  #Creating dictionary so that I can sort contacting partner residues 
-  #once I have them in them in the atom indexed list
-  atomToResDict = {}
 
-  allAtoms= [item for sublist in chain_atoms for item in sublist]
-  #Make a dictionary relating the index of all atoms to their residue number
-  for ind, atom in enumerate(allAtoms):
-    atomToResDict[ind] = atom.get_full_id()[3][1]-1 #Have to subtract one to get into Pythonic indices
-  print(atomToResDict)
-  sys.exit()
-  
   fdAtomPartnerObjects = {} # This is the atom-based dictionary we will put the Fd partner contacts into
   #Making a contact map with a 4.5 angstrom cutoff
-  for i, atom in enumerate(Fd_atoms): #Going through all Fd atoms
-    res_contacts = []
+
+  #for i, atom in enumerate(Fd_atoms): #Going through all Fd atoms
+  for key in fdAtomIndexDict.keys(): #Going through all Fd atoms
+    atom=fdAtomIndexDict[key]
     res_contact_ids= []
     
-    center = Fd_atoms[i].get_coord()
-    
+    atomSeqIO=atom.atomOB
+    center = atomSeqIO.get_coord()
+
     neighbors = neighbor_searcher.search(center, 4.5) # 4.5 angstroms from center of selected atom
     residue_list = Selection.unfold_entities(neighbors, 'R') #Finds residues of all neighbors (non-redundantly). R for residues
     for item in residue_list:
       if item.get_id()[0][0]!=" ":#This should skip over hetero-atoms and water
         continue
       else:
-        res_contacts.append(item.id[1])
         res_contact_ids.append(item)
     
-    fdAtomPartnerObjects.append(res_contact_ids)
+    fdAtomPartnerObjects[key]=res_contact_ids
 
 
   #Pulling out the res index of the last atom in the selected Fd chain
-  firstFdResIndex=chain_atoms[Fd_ind][0].get_full_id()[3][1]
-  lastFdResIndex = chain_atoms[Fd_ind][-1].get_full_id()[3][1]
-  fdResPartnerObjects={} # The keys will be the pdb residue indices and the values with the SEQIO objects that contact them.
+  #firstFdResIndex=chain_atoms[Fd_ind][0].get_full_id()[3][1]
+  #lastFdResIndex = chain_atoms[Fd_ind][-1].get_full_id()[3][1]
 
-  #fdResPartnerObjects = [[] for a in range(0, lastFdResIndex+1)]# This is the residue-based list we will put the Fd partner contacts into
+  fdResPartnerObjects={} # The keys will be the alignment residue indices and the values will be the SEQIO objects that contact them.
+  fdResPartnerIndexs={} #The keys will be the alignment residue indices and the values will be the alignment index of the residues that contact them.  
   
   #This nested for loop will add partner residue objects to the appropriate
   #Fd residue indices using the FdAtomToResDict dictionary as a key
-  #The result will be a list of lists, in which each sublist contains the SEQIO residue objects that contact 
-  #the atom with the index in the protein equal to the index in the list of lists.
-  for i, atom in enumerate(fdAtomPartnerObjects):
-    print(fdAtomPartnerObjects)
-    sys.exit()
-    for contactingRes in atom:
-      print(atom)
-      sys.exit()
-      FdAtomToResDict[index]
-      if contactingRes not in fdResPartnerObjects[FdAtomToResDict[index]]:
-        
-        fdResPartnerObjects[0] = contactingRes
+  for atomIndex in fdAtomPartnerObjects.keys():
+    contactingResidues=fdAtomPartnerObjects[atomIndex]
 
-  print(fdResPartnerObjects)
+    myAtomObject=atomIndexDict[atomIndex] #Get my version of the relevant atom's object
+    homeResidue=indDict[myAtomObject.resIndex] #Transform the atoms pdb residuce index to alignment index
+    resObjects=[]
+    contactingResidueIndices=[]
+    
+    for res in contactingResidues: #Cycle through residues, dumping either their object or index into a box, omitting duplicates
+      pdbResIndex=res.get_full_id()[3][1]
+      alignResIndex=indDict[pdbResIndex]
+      
+      if res not in resObjects:
+        resObjects.append(res)
+      
+      if alignResIndex not in contactingResidueIndices:
+        contactingResidueIndices.append(alignResIndex)
+    
+    fdResPartnerObjects[homeResidue]=resObjects
+    fdResPartnerIndexs[homeResidue]=contactingResidueIndices
 
-  parentResidues=res_list[Fd_ind]
+  parentResidues=res_list[Fd_chainID]
   crs=[]
-  residueIndices=range(firstFdResIndex, lastFdResIndex+1)
 
-  for res_ind in residueIndices:
-    res= parentResidues[res_ind]
+  if len(parentResidues) != len(fdResPartnerIndexs):
+    print("Something wrong with align sequence versus pdb sequence.  Fix.")
+    sys.exit()
+  
+  indKeys=list(fdResPartnerIndexs.keys())
 
-    contactIndices=[x.get_full_id()[3][1]-1 for x in fdResPartnerObjects[res_ind]] #Pull out only the indices of the contacting residues for the residue in question (from the box of contacting residues).
+  for i, res in enumerate(parentResidues):
+    alignmentIndex=indKeys[i]
 
-    if res_ind in contactIndices: 
-      contactIndices=[x for x in contactIndices if x is not res_ind] #Remove the residue's self index from the list of residues it contacts.  Don't care if a residue contacts itself.
+    contactIndices=fdResPartnerIndexs[alignmentIndex]
+    if alignmentIndex in contactIndices: 
+      contactIndices=[x for x in contactIndices if x is not alignmentIndex] #Remove the residue's self index from the list of residues it contacts.  Don't care if a residue contacts itself.
 
     resName=res.get_resname()
-    resIndex=res.get_full_id()[3][1]
-    resIndex=indDict[resIndex] #Re-index residues to correspond to alignment
-    contactIndices=[indDict[x] for x in contactIndices] #Re-index contacting residue to correspond to alignment
- 
-    workingResidue=contactedRes(resName, resIndex, contactIndices)# Create contacted Res objects
+
+    workingResidue=contactedRes(resName, alignmentIndex, contactIndices)# Create contacted Res objects
     crs.append(workingResidue)
   
   p=parent(parentName, crs)
-  print(p.sequence)
-  sys.exit()
   return p
 
 #May want to write script that will fill in holes in Fd residue chain
@@ -493,7 +491,7 @@ def main():
   alignmentFile="parentAlignEd.txt"
   chimFile="chimIndices.csv"
   chims=plate_Grabber(chimFile)
-  print(chims)
+  #print(chims)
   
   parents=[]
   
@@ -515,11 +513,11 @@ def main():
     atomIndexDict, FdAtomToResDict=atomSorter(c_atoms)
 
     parentOb = contact_maker(Fd, pName, c_res, indDict, atomIndexDict, FdAtomToResDict) #Finds all residues that contact selected chain residues
-    sys.exit()
     parents.append(parentOb)
     
     #completeFdRes = chain_filler(Fd_res) #Fills in blank lists where non-structured Fd should be in the chain
   print(len(parents))
+  sys.exit()
   p1=parents[0]
   print(p1.name)
   print(p1.sequence)
