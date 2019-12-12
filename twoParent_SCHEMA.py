@@ -130,26 +130,26 @@ def pdb_parser(pdb_file):
 
 def reIndexDictMaker(parentResidues, alignmentSequence):
   """Need to re-index both residues and contacts."""
-
-  j=1#Gap counter. This will used to offset the incremental 
-  # discrepancies in the sortingList index caused by the gaps.
+  print(alignmentSequence)
   gapInds=[]
   for i, aa in enumerate(alignmentSequence):    
-    if aa == "-":         
-      gapInds.append(i)
-
+    if aa == "-":
+      print(i)
+      print(aa)
+      gapInds.append(i+1)
+  print("gapInds:")
+  print(gapInds)
   maxInd=(parentResidues[-1].get_full_id()[3][1])  
   minInd=(parentResidues[0].get_full_id()[3][1])
-
+  print("minInd:"+str(minInd))
   pdbLength=maxInd-minInd
-
+  
   pdb_Inds= [x+minInd for x in range(pdbLength+1)] #Add min pdb ind so we in agreement with pdb values.  Add 1 to range to make inclusive.
   align_Inds=[x+1 for x in range(pdbLength+1)] #Add one so that we are in line with the human numbering scheme of the alignment.  Add 1 to range to make inclusive.
   #These two lists should have the same length.
   #Add in scalars to match them to their original respective numbering schemes.
   #Add one to align inds if there is a gap detected in the sequence. (Boosts everything after it up)
   #They can then be used to create a dictionary that will change sequence indexes into alignment indices
-
 
   for gap in gapInds:
     align_Inds=[x+1 if x >= gap else x for x in align_Inds]#Add +1 to each ind value if it comes on or after a gap
@@ -273,86 +273,23 @@ def contact_maker(Fd_chainID, parentName, res_list, indDict, atomIndexDict, atom
   p=parent(parentName, crs)
   return p
 
-#May want to write script that will fill in holes in Fd residue chain
-def chain_filler(resObjects):
-  lastFdResIndex = resObjects[-1].get_full_id()[3][1]
-  filledChainList = [[] for a in range(0, lastFdResIndex)]
-  for res in resObjects:
-    Fd_index = res.get_full_id()[3][1] -1 #Must subtract one to get in with pythonic indices
-    filledChainList[Fd_index] = res
-  return filledChainList
-  
-#This function scans through the alignment sequence to look for gaps 
-# and add +1 to the index of the amino acid at that position
-# and each amino acid after within the parent object.
-def reIndexer(parent, alignmentSequence):
-  residueMax, sortingList= parent.spitSequence()
-
-  """Need to re-index both residues and contacts.
-  """
-  #print([x.index for x in sortingList])
-  print([x.index for x in sortingList])
-
-  j=1#Gap counter. This will used to offset the incremental 
-  # discrepancies in the sortingList index caused by the gaps.
-  gapInds=[]
-  for i, aa in enumerate(alignmentSequence):    
-    if aa == "-":         
-      gapInds.append(i)
-
-  for i in gapInds:
-    for res in sortingList[i+1-j:]: #Increase the index of every residue object after a gap is seen in the alignment.
-      try:
-        res.index+=1
-      except TypeError:
-        continue
-      j+=1
-  
-  print([x.index for x in sortingList])
-  print(sortingList[1].contacts)
-  
-  j=1
-  for i in gapInds:
-    for res in sortingList:
-      for con in res.contacts:
-        if con > i:
-          con +=1
-    j+=1    
-  print(sortingList[1].contacts)
-
-
-
-  """print([x.index for x in sortingList])
-  print(parent.residues[0].index)
-  print(parent.residues[0].resType)"""
-
-  reIndexedRes=[] 
-  for item in sortingList:
-    if item != []:
-      reIndexedRes.append(item)
-  
-  parent.residues=reIndexedRes
-
-  return parent #Spit out parent with reindexed residues.
 
 #Takes correctly indexed parents and removes the contacts from all amino acids which will not be changed by recombination.
 def redundancyRemover(indexedParents, alignmentSequence1, alignmentSequence2):
-  residueMax1, sortingList1= indexedParents[0].spitSequence()
-  residueMax2, sortingList2= indexedParents[1].spitSequence()
   redundantIndices=[] #List that will hold the index of amino acids that are the same in each parent.
   redDict={}
   for i, aa in enumerate(alignmentSequence1):    
     if alignmentSequence1[i] == alignmentSequence2[i]:
       redundantIndices.append(i+1)#Need to add one to go from pythonic indices to pdb indices.
       redDict[i]=aa
-  print(redundantIndices)
-  print(redDict)
-  
+
+
   for res in indexedParents[0].residues:#Get rid of contacts in all redundant residues in parent 1
     if res.index in redundantIndices:
       #print(res.resType)
       #print(res.index)
       res.contacts=[] 
+    #print(res.contacts)
 
   for res in indexedParents[1].residues:#Get rid of contacts in all redundant residues in parent 2
     if res.index in redundantIndices:
@@ -360,17 +297,7 @@ def redundancyRemover(indexedParents, alignmentSequence1, alignmentSequence2):
       #print(res.index)
       res.contacts=[] 
 
-  #print(indexedParents[0].residues)
-  """print(indexedParents[0].residues[0].resType)
-  print(indexedParents[0].residues[0].contacts)
-  print(indexedParents[0].residues[0].index)
-  print(indexedParents[0].residues[-2].resType)
-  print(indexedParents[0].residues[-2].contacts)
-  print(indexedParents[0].residues[-2].index)"""  
-
-  #print([x.index for x in sortingList])
   return indexedParents
- 
 
 #This script will cycle through all possible double crossover recombinants of the two parents
 #calculate schema scores and generate chimera objects that store schema, sequence, and hamming distance information. 
@@ -475,7 +402,6 @@ def schemaCalc(parent1, parent2):
       chimerap2List.append(workingChim)
   return chimerap1List,chimerap2List"""
 
-
 def file_writer(chim1List, chim2List):
   final_name = "allChimeras.csv"
   with open(final_name,'w', newline="") as outfile:
@@ -488,6 +414,8 @@ def file_writer(chim1List, chim2List):
  
 def main():
   pdbFiles=["1rfk.pdb","pssm.pdb"]
+  #pdbFiles=["pssm.pdb","1rfk.pdb"]
+
   alignmentFile="parentAlignEd.txt"
   chimFile="chimIndices.csv"
   chims=plate_Grabber(chimFile)
@@ -502,6 +430,7 @@ def main():
     alignSequences.append(record.seq)
   print(alignSequences)
 
+  indDicts=[]
   #Loop through several functions to add a parent object to the list.
   for i, file in enumerate(pdbFiles):
     c_dict, Fd, pName = chain_dict_maker(file) #Uses Regex to make dictionary relating chain ID to datebase name, aka {C: CYFD001} and queries user to designate Chain of interest
@@ -509,35 +438,27 @@ def main():
     Fd_res = c_res[Fd] #Selects Fd chain from all residue chains
     #print(Fd_res)
     indDict=reIndexDictMaker(Fd_res,alignSequences[i]) #Create dictionary relating non-aligned residue to aligned residues.
-
+    indDicts.append(indDict)
+    print(indDict)
+    if i == 1:
+      sys.exit()
     atomIndexDict, FdAtomToResDict=atomSorter(c_atoms)
 
     parentOb = contact_maker(Fd, pName, c_res, indDict, atomIndexDict, FdAtomToResDict) #Finds all residues that contact selected chain residues
     parents.append(parentOb)
     
     #completeFdRes = chain_filler(Fd_res) #Fills in blank lists where non-structured Fd should be in the chain
-  print(len(parents))
-  sys.exit()
-  p1=parents[0]
-  print(p1.name)
-  print(p1.sequence)
-  rm, sL = p1.spitSequence()
-  print(len(sL))
-  #for con in sL:
-  #  print(con.contacts)
+  print(indDicts[0])
+  print(indDicts[1])
   sys.exit()
 
+  p1AlignSeq=list(str(alignSequences[0]))
+  p2AlignSeq=list(str(alignSequences[1]))
+  print(p1AlignSeq)
+  print(p2AlignSeq)
+  nonRedParents= redundancyRemover(parents,p1AlignSeq,p2AlignSeq)
 
-  
-  """p1AlignSeq=list(str(sequences[0]))
-  p2AlignSeq=list(str(sequences[1]))
-
-  p1=reIndexer(parents[0],p1AlignSeq)"""
-
-  """p2=reIndexer(parents[1],p2AlignSeq)
-  nonRedParents= redundancyRemover([p1,p2],p1AlignSeq,p2AlignSeq)
-
-  p1.alignSeq=p1AlignSeq
+  """p1.alignSeq=p1AlignSeq
   p2.alignSeq=p2AlignSeq
   schemaCalc(nonRedParents[0], nonRedParents[1])
   #p1Chims, p2Chims=schemaCalc(nonRedParents[0], nonRedParents[1])"""
