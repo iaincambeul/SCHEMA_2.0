@@ -392,16 +392,19 @@ def redundancyRemover(indexedParents, alignmentSequence1, alignmentSequence2):
       redundantIndices.append(i+1)#Need to add one to go from pythonic indices to pdb indices.
       redDict[i]=aa
 
-
   for res in indexedParents[0].residues:#Get rid of contacts in all redundant residues in parent 1
     if res.index in redundantIndices:
       res.contacts=[] 
+    else:
+      res.contacts = [x for x in res.contacts if x not in redundantIndices] #Remove all redudant indices from each residue object
 
   for res in indexedParents[1].residues:#Get rid of contacts in all redundant residues in parent 2
     if res.index in redundantIndices:
       res.contacts=[] 
+    else:
+      res.contacts = [x for x in res.contacts if x not in redundantIndices] #Remove all redudant indices from each residue object
 
-  return indexedParents
+  return indexedParents, redundantIndices
 
 #This script will cycle through all possible double crossover recombinants of the two parents
 #calculate schema scores and generate chimera objects that store schema, sequence, and hamming distance information. 
@@ -525,7 +528,6 @@ def main():
   chims=plate_Grabber(chimFile)
   
   choices=[1,0]
-
   parents=[]
   
   #Getting the sequences of the aligned parents
@@ -554,13 +556,6 @@ def main():
 
     parentOb = contact_maker(Fd, pName, c_res, indDict, atomIndexDict, FdAtomToResDict) #Finds all residues that contact selected chain residues
     parents.append(parentOb)
-    with open(str(pNames[i])+".csv", "w", newline="") as csvFile:
-      csvWriter= csv.writer(csvFile)
-      csvWriter.writerow(["Res Number", "Contacts", "Number of Contacts"])
-      resList=parentOb.residues
-      for res in resList:
-        csvWriter.writerow([res.index, res.contacts, len(res.contacts)])
-
 
     #completeFdRes = chain_filler(Fd_res) #Fills in blank lists where non-structured Fd should be in the chain
 
@@ -569,7 +564,21 @@ def main():
   p2AlignSeq=list(str(alignSequences[1]))
   #print(p1AlignSeq)
   #print(p2AlignSeq)
-  nonRedParents= redundancyRemover(parents,p1AlignSeq,p2AlignSeq)
+  nonRedParents, redundancies= redundancyRemover(parents,p1AlignSeq,p2AlignSeq)
+
+  for i, parent in enumerate(nonRedParents):
+    with open(str(pNames[i])+"_red.csv", "w", newline="") as csvFile:
+      csvWriter= csv.writer(csvFile)
+      csvWriter.writerow(["Res Number", "Contacts", "Number of Contacts"])
+      resList=parent.residues
+      for res in resList:
+        csvWriter.writerow([res.index, res.contacts, len(res.contacts)])
+
+  with open("Redundancies.csv", "w", newline="") as redFile:
+    redWriter= csv.writer(redFile)
+    redWriter.writerow(["Index"])
+    for ind in redundancies:
+      redWriter.writerow([ind])
 
   """p1.alignSeq=p1AlignSeq
   p2.alignSeq=p2AlignSeq
