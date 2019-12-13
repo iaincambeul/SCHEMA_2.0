@@ -301,6 +301,7 @@ def contact_maker(Fd_chainID, parentName, res_list, indDict, atomIndexDict, atom
   #Making a contact map with a 4.5 angstrom cutoff
 
   #for i, atom in enumerate(Fd_atoms): #Going through all Fd atoms
+  i=0
   for key in fdAtomIndexDict.keys(): #Going through all Fd atoms
     atom=fdAtomIndexDict[key]
     res_contact_ids= []
@@ -309,15 +310,22 @@ def contact_maker(Fd_chainID, parentName, res_list, indDict, atomIndexDict, atom
     center = atomSeqIO.get_coord()
 
     neighbors = neighbor_searcher.search(center, 4.5) # 4.5 angstroms from center of selected atom
+
     residue_list = Selection.unfold_entities(neighbors, 'R') #Finds residues of all neighbors (non-redundantly). R for residues
     for item in residue_list:
       if item.get_id()[0][0]!=" ":#This should skip over hetero-atoms and water
         continue
       else:
         res_contact_ids.append(item)
-    
+    i+=1
+
     fdAtomPartnerObjects[key]=res_contact_ids
 
+  #keys=range(1,15)
+  #inds=[list(fdAtomIndexDict.keys())[key] for key in keys]
+  #items=[fdAtomPartnerObjects[ind] for ind in inds]
+  #print(items)
+  #sys.exit()
 
   #Pulling out the res index of the last atom in the selected Fd chain
   #firstFdResIndex=chain_atoms[Fd_ind][0].get_full_id()[3][1]
@@ -333,21 +341,22 @@ def contact_maker(Fd_chainID, parentName, res_list, indDict, atomIndexDict, atom
 
     myAtomObject=atomIndexDict[atomIndex] #Get my version of the relevant atom's object
     homeResidue=indDict[myAtomObject.resIndex] #Transform the atoms pdb residuce index to alignment index
-    resObjects=[]
-    contactingResidueIndices=[]
     
+    if homeResidue not in fdResPartnerObjects.keys():#Instantiate dictionary entry if it doesn't exist
+      fdResPartnerObjects[homeResidue]=[]
+
+    if homeResidue not in fdResPartnerIndexs.keys():#Instantiate dictionary entry if it doesn't exist
+      fdResPartnerIndexs[homeResidue]=[]
+ 
     for res in contactingResidues: #Cycle through residues, dumping either their object or index into a box, omitting duplicates
       pdbResIndex=res.get_full_id()[3][1]
       alignResIndex=indDict[pdbResIndex]
       
-      if res not in resObjects:
-        resObjects.append(res)
+      if res not in fdResPartnerObjects[homeResidue]: #If this residue object not in dictionary entry, add it
+        fdResPartnerObjects[homeResidue].append(res)
       
-      if alignResIndex not in contactingResidueIndices:
-        contactingResidueIndices.append(alignResIndex)
-    
-    fdResPartnerObjects[homeResidue]=resObjects
-    fdResPartnerIndexs[homeResidue]=contactingResidueIndices
+      if alignResIndex not in fdResPartnerIndexs[homeResidue]: #If this residue index not in dictionary entry, add it
+        fdResPartnerIndexs[homeResidue].append(alignResIndex)
 
   parentResidues=res_list[Fd_chainID]
   crs=[]
@@ -543,7 +552,7 @@ def main():
 
     atomIndexDict, FdAtomToResDict=atomSorter(c_atoms)
 
-    parentOb = contact_maker_test(Fd, pName, c_res, indDict, atomIndexDict, FdAtomToResDict) #Finds all residues that contact selected chain residues
+    parentOb = contact_maker(Fd, pName, c_res, indDict, atomIndexDict, FdAtomToResDict) #Finds all residues that contact selected chain residues
     parents.append(parentOb)
     with open(str(pNames[i])+".csv", "w", newline="") as csvFile:
       csvWriter= csv.writer(csvFile)
