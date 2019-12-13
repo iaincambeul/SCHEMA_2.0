@@ -406,6 +406,8 @@ def main():
   chimFile="chimIndices.csv"
   chims=plate_Grabber(chimFile)
   
+  #choices=[1,0]
+
   parents=[]
   
   #Getting the sequences of the aligned parents
@@ -419,7 +421,12 @@ def main():
   #Loop through several functions to add a parent object to the list.
   for i, file in enumerate(pdbFiles):
     pName=pdbFiles[i].replace(".csv","")#Get structure name
-    c_List, Fd = chain_dict_maker(file, pName) #Uses Regex to make dictionary relating chain ID to datebase name, aka {C: CYFD001} and queries user to designate Chain of interest
+    
+    if "choices" not in locals():
+      c_List, Fd = chain_dict_maker(file, pName) #Uses Regex to make dictionary relating chain ID to datebase name, aka {C: CYFD001} and queries user to designate Chain of interest
+    else:
+      Fd=choices[i]
+    
     c_atoms, c_res = pdb_parser(file) #Pulls out all atoms and residues from pdb file, each into single lists
     Fd_res = c_res[Fd] #Selects Fd chain from all residue chains
     indDict=reIndexDictMaker(Fd_res,alignSequences[i]) #Create dictionary relating non-aligned residue to aligned residues.
