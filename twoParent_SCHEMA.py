@@ -76,24 +76,20 @@ def plate_Grabber(file_name):
   plate=pd.read_csv(file_name, index_col=0)
   return plate
 
-def chain_dict_maker(pdb_file):
-  pdb_open = open(pdb_file, "r")
-  chain_list = []
-  chain_list = re.findall("DBREF\s+\w+\s+(\w)\s+\w+\s+\w+\s+\w+\s+\w+\s+(\w+)", pdb_open.read())
+def chain_dict_maker(pdb_file, pName):
+  parser= PDBParser()
+  structure = parser.get_structure("test", pdb_file)
+  chains = Selection.unfold_entities(structure, 'C')
+  chain_list=[chain.get_full_id()[2] for chain in chains]
   chain_dict = {}
-  for chain in chain_list:
-    chain_dict[chain[0]] = chain[1]
-  pdb_open.close()
-  
+
   #Set baseline values for returned variables in case no chain monikers are detected
   Fd_choice=0
   parentName =""
-  
   #Skip over this if no chains are found
   if len(chain_list) != 0:
-    print(chain_dict)
-    Fd_choice = input("Which uppercase letter corresponds to the Fd in the list (A, B, C, etc.)? ")
-    parentName=chain_dict[Fd_choice]
+    print(chain_list)
+    Fd_choice = input("Which uppercase letter corresponds to the Fd in the list (A, B, C, etc.) for " + str(pName) +"?")
     try:
       Fd_choice = letterToNumber_dict[Fd_choice]
     except KeyError:
@@ -101,7 +97,7 @@ def chain_dict_maker(pdb_file):
       sys.exit()
     print(Fd_choice)
   
-  return chain_dict, Fd_choice, parentName
+  return chain_dict, Fd_choice
 
 def pdb_parser(pdb_file):
   parser= PDBParser()
@@ -130,18 +126,13 @@ def pdb_parser(pdb_file):
 
 def reIndexDictMaker(parentResidues, alignmentSequence):
   """Need to re-index both residues and contacts."""
-  print(alignmentSequence)
   gapInds=[]
   for i, aa in enumerate(alignmentSequence):    
     if aa == "-":
-      print(i)
-      print(aa)
       gapInds.append(i+1)
-  print("gapInds:")
-  print(gapInds)
+
   maxInd=(parentResidues[-1].get_full_id()[3][1])  
   minInd=(parentResidues[0].get_full_id()[3][1])
-  print("minInd:"+str(minInd))
   pdbLength=maxInd-minInd
   
   pdb_Inds= [x+minInd for x in range(pdbLength+1)] #Add min pdb ind so we in agreement with pdb values.  Add 1 to range to make inclusive.
@@ -286,15 +277,10 @@ def redundancyRemover(indexedParents, alignmentSequence1, alignmentSequence2):
 
   for res in indexedParents[0].residues:#Get rid of contacts in all redundant residues in parent 1
     if res.index in redundantIndices:
-      #print(res.resType)
-      #print(res.index)
       res.contacts=[] 
-    #print(res.contacts)
 
   for res in indexedParents[1].residues:#Get rid of contacts in all redundant residues in parent 2
     if res.index in redundantIndices:
-      #print(res.resType)
-      #print(res.index)
       res.contacts=[] 
 
   return indexedParents
@@ -413,13 +399,12 @@ def file_writer(chim1List, chim2List):
       writer.writerow([chim.sequence, chim.coords, chim.coordType, chim.schemaP1, chim.schemaP2, chim.schema_min, chim.hamP1, chim.hamP2, chim.p1Cons, chim.p2Cons])
  
 def main():
-  pdbFiles=["1rfk.pdb","pssm.pdb"]
+  pdbFiles=["1rfk.pdb","newPssm2.pdb"]
   #pdbFiles=["pssm.pdb","1rfk.pdb"]
-
+  pNames=["1rfk","pssm"]
   alignmentFile="parentAlignEd.txt"
   chimFile="chimIndices.csv"
   chims=plate_Grabber(chimFile)
-  #print(chims)
   
   parents=[]
   
@@ -433,29 +418,32 @@ def main():
   indDicts=[]
   #Loop through several functions to add a parent object to the list.
   for i, file in enumerate(pdbFiles):
-    c_dict, Fd, pName = chain_dict_maker(file) #Uses Regex to make dictionary relating chain ID to datebase name, aka {C: CYFD001} and queries user to designate Chain of interest
+    pName=pdbFiles[i].replace(".csv","")#Get structure name
+    c_List, Fd = chain_dict_maker(file, pName) #Uses Regex to make dictionary relating chain ID to datebase name, aka {C: CYFD001} and queries user to designate Chain of interest
     c_atoms, c_res = pdb_parser(file) #Pulls out all atoms and residues from pdb file, each into single lists
     Fd_res = c_res[Fd] #Selects Fd chain from all residue chains
-    #print(Fd_res)
     indDict=reIndexDictMaker(Fd_res,alignSequences[i]) #Create dictionary relating non-aligned residue to aligned residues.
     indDicts.append(indDict)
-    print(indDict)
-    if i == 1:
-      sys.exit()
+
     atomIndexDict, FdAtomToResDict=atomSorter(c_atoms)
 
     parentOb = contact_maker(Fd, pName, c_res, indDict, atomIndexDict, FdAtomToResDict) #Finds all residues that contact selected chain residues
     parents.append(parentOb)
-    
+    with open(str(pNames[i])+".csv", "w", newline="") as csvFile:
+      csvWriter= csv.writer(csvFile)
+      csvWriter.writerow(["Res Number", "Contacts", "Number of Contacts"])
+      resList=parentOb.residues
+      for res in resList:
+        csvWriter.writerow([res.index, res.contacts, len(res.contacts)])
+
+
     #completeFdRes = chain_filler(Fd_res) #Fills in blank lists where non-structured Fd should be in the chain
-  print(indDicts[0])
-  print(indDicts[1])
-  sys.exit()
+
 
   p1AlignSeq=list(str(alignSequences[0]))
   p2AlignSeq=list(str(alignSequences[1]))
-  print(p1AlignSeq)
-  print(p2AlignSeq)
+  #print(p1AlignSeq)
+  #print(p2AlignSeq)
   nonRedParents= redundancyRemover(parents,p1AlignSeq,p2AlignSeq)
 
   """p1.alignSeq=p1AlignSeq
