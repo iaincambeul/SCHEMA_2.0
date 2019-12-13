@@ -1,0 +1,28 @@
+  with open("indexCheck.csv", "w") as csvFile:
+    writer = csv.writer(csvFile, delimiter="\n")
+    p1Index=[x.index for x in indexedParents[0].residues]
+    p2Index=[x.index for x in indexedParents[1].residues]
+    print(p1Index)
+    print(len(p1Index))
+    print(alignmentSequence1)
+    print(len(alignmentSequence1))
+    sys.exit()
+
+    writer.writerow(["Seq", "Index"])
+    for i, a in enumerate(alignmentSequence1):      
+      writer.writerow([alignmentSequence1[i],p1Index[i]])
+    
+    writer.writerow(["Seq", "Index"])
+    for i, a in enumerate(alignmentSequence2):      
+      writer.writerow([alignmentSequence2[i],p2Index[i]])
+      
+  sys.exit()
+  with open("redudantCheck.csv", "w") as csvFile:
+    writer = csv.writer(csvFile, delimiter="\n")
+    p1Contacts=[x.contacts for x in indexedParents[0].residues]
+    p2Contacts=[x.contacts for x in indexedParents[1].residues]
+    
+    print(alignmentSequence2)
+    print(p2Contacts)
+    print(len(p1Contacts))
+    print(len(p2Contacts))

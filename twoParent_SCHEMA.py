@@ -406,7 +406,7 @@ def main():
   chimFile="chimIndices.csv"
   chims=plate_Grabber(chimFile)
   
-  #choices=[1,0]
+  choices=[1,0]
 
   parents=[]
   
@@ -422,8 +422,8 @@ def main():
   for i, file in enumerate(pdbFiles):
     pName=pdbFiles[i].replace(".csv","")#Get structure name
     
-    if "choices" not in locals():
-      c_List, Fd = chain_dict_maker(file, pName) #Uses Regex to make dictionary relating chain ID to datebase name, aka {C: CYFD001} and queries user to designate Chain of interest
+    if "choices" not in locals(): #Use biopython to query user about chain of interest if not already assigned.
+      c_List, Fd = chain_dict_maker(file, pName)
     else:
       Fd=choices[i]
     
