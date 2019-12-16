@@ -3,6 +3,7 @@ import re
 import os
 import csv
 import pandas as pd
+import numpy
 from Bio.PDB import *
 from Bio import SeqIO
 from Bio import SeqUtils
@@ -47,11 +48,11 @@ class parent:
     indexList=[x.index for x in residueList]
     residueMax=max(indexList) #Find maximum index of amino acids
   
-    sortingList=[[] for x in range(residueMax)]
+    sortingDict={}
     for res in residueList:
-      sortingList[res.index-1]=res #Dump residue objects into their appropriate place in the list.  Subtract one to get pythonic indexing from human indexing.
+      sortingDict[res.index]=res #Dump residue objects into their appropriate place in the list.  Subtract one to get pythonic indexing from human indexing.
 
-    return residueMax, sortingList
+    return residueMax, sortingDict
 
 class chimera:
   def __init__(self, gapSequence, coords, coordType, p1, p2, schemaP1, schemaP2):
@@ -408,6 +409,46 @@ def redundancyRemover(indexedParents, alignmentSequence1, alignmentSequence2):
 
 #This script will cycle through all possible double crossover recombinants of the two parents
 #calculate schema scores and generate chimera objects that store schema, sequence, and hamming distance information. 
+
+def singleSchemaCalc(parent1, parent2, indices):
+  schemas=[]
+  residueMax, sortingDict= parent1.spitSequence()
+  crossedOverInds1=(list(range(indices[0]+1,indices[1]+1)))
+
+  #This makes a list of the objects respresentating the residues that are changed relative to p1
+  crossedOverObjects1= [sortingDict[x] for x in crossedOverInds1] 
+  crossedOverContacts1=[x.contacts for x in crossedOverObjects1]
+  flatContacts1=[x for sublist in crossedOverContacts1 for x in sublist]
+  countBin=[]
+  nonCountBin=[]
+  schema1=0
+  for x in flatContacts1:
+    if x not in crossedOverInds1:
+      schema1 +=1
+      countBin.append(x)
+    else:
+      nonCountBin.append(x)
+  schemas.append(schema1)
+
+  
+  #This makes a list of the objects respresentating the residues that are changed relative to p2
+  residueMax, sortingDict= parent2.spitSequence()
+  crossedOverInds2=(list(range(indices[0]+1,indices[1]+1)))
+  crossedOverObjects2= [sortingDict[x] for x in crossedOverInds2] 
+  crossedOverContacts2=[x.contacts for x in crossedOverObjects2]
+  flatContacts2=[x for sublist in crossedOverContacts2 for x in sublist]
+  countBin=[]
+  nonCountBin=[]
+  schema2=0
+  for x in flatContacts2:
+    if x not in crossedOverInds2:
+      schema2 +=1
+      countBin.append(x)
+    else:
+      nonCountBin.append(x)
+  schemas.append(schema2)
+  return(schemas)
+
 def schemaCalc(parent1, parent2):
   residueMax1, sortingListP1=parent1.spitSequence()
   residueMax2, sortingListP2=parent2.spitSequence()
@@ -535,7 +576,7 @@ def main():
   alignSequences=[]
   for record in align:
     alignSequences.append(record.seq)
-  print(alignSequences)
+  #print(alignSequences)
 
   indDicts=[]
   #Loop through several functions to add a parent object to the list.
@@ -562,9 +603,8 @@ def main():
 
   p1AlignSeq=list(str(alignSequences[0]))
   p2AlignSeq=list(str(alignSequences[1]))
-  #print(p1AlignSeq)
-  #print(p2AlignSeq)
   nonRedParents, redundancies= redundancyRemover(parents,p1AlignSeq,p2AlignSeq)
+
 
   for i, parent in enumerate(nonRedParents):
     with open(str(pNames[i])+"_red.csv", "w", newline="") as csvFile:
@@ -580,13 +620,25 @@ def main():
     for ind in redundancies:
       redWriter.writerow([ind])
 
-  """p1.alignSeq=p1AlignSeq
-  p2.alignSeq=p2AlignSeq
-  schemaCalc(nonRedParents[0], nonRedParents[1])
-  #p1Chims, p2Chims=schemaCalc(nonRedParents[0], nonRedParents[1])"""
+  #Calculate average contacts for each parent
+  p1ContactCountBin=[len(x.contacts) for x in nonRedParents[0].residues]
+  p1ContactMean=numpy.average(p1ContactCountBin)
+  p2ContactCountBin=[len(x.contacts) for x in nonRedParents[1].residues]
+  p2ContactMean=numpy.average(p2ContactCountBin)
 
-  """file_writer(p1Chims,p2Chims)"""
-  
+
+  schemaDict={}
+  for dcNumber, row in chims.iterrows():
+    dcInds=list(row)
+    schemaDict[dcNumber]=singleSchemaCalc(nonRedParents[0], nonRedParents[1], dcInds)
+  print(schemaDict)
+
+  with open("schemaOutputs.csv", "w", newline="") as outFile:
+    outWriter=csv.writer(outFile)
+    outWriter.writerow(["Chimera Number", "Parent 1 Schema", "Parent 2 Schema", "Parent 1 Schema Normed", "Parent 2 Schema Normed"])
+    for key in schemaDict.keys():
+      schemas=schemaDict[key]
+      outWriter.writerow([key, schemas[0], schemas[1], schemas[0]/p1ContactMean, schemas[1]/p2ContactMean])
 
 if __name__ == '__main__':
     main() 
